@@ -8,7 +8,7 @@ import (
 
 var cli struct {
 	Sync struct {
-		Out  string `name:"out" help:"The directory to sync files to" type:"existingdir" default:"."`
+		Out  string `help:"The directory to sync files to" type:"existingdir" default:"."`
 		Path string `arg:"" name:"path" help:"The file describing what to sync" type:"existingfile"`
 	} `cmd:"" help:"Sync music files"`
 	Add struct {
