@@ -2,6 +2,7 @@ package internal
 
 import (
 	"fmt"
+	"path"
 
 	"github.com/BurntSushi/toml"
 )
@@ -33,6 +34,28 @@ type Source struct {
 	URL string
 	// A list of sections that we need to split this source into
 	Sections []Section
+}
+
+// DirectoryPath creats the path where we'd store the invididual sources
+func (s *Source) DirectoryPath(base string) string {
+	return path.Join(base, s.Path, s.Name)
+}
+
+// MP3Path creates the path where we'd save the entire source media
+func (s *Source) MP3Path(base string) string {
+	return path.Join(base, s.Path, s.Name+".mp3")
+}
+
+// M4APath creates the path where we'd save this full media with an m4a extension
+// This is useful because we download using youtube-dl to this path, and then convert
+// using another path
+func (s *Source) M4APath(base string) string {
+	return path.Join(base, s.Path, s.Name+".m4a")
+}
+
+// CoverArtPath returns the path to the cover art
+func (s *Source) CoverArtPath(base string) string {
+	return path.Join(base, s.Path, s.Name+".jpg")
 }
 
 // Library represents a collection of sources we want to gather and download

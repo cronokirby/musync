@@ -2,6 +2,9 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
+
+	"github.com/cronokirby/musync/internal"
 
 	"github.com/alecthomas/kong"
 )
@@ -17,6 +20,27 @@ var cli struct {
 }
 
 func sync(out string, path string) {
+	data, err := ioutil.ReadFile(path)
+	if err != nil {
+		fmt.Printf("Failed to read sync file: %v\n", err)
+		return
+	}
+	lib, err := internal.LoadLibrary(string(data))
+	if err != nil {
+		fmt.Printf("Failed to parse library: %v\n", err)
+		return
+	}
+	for _, v := range lib.Sources {
+		fmt.Printf("Downloading '%s'\n", v.Name)
+		downloaded, err := internal.Download(out, &v)
+		if err != nil {
+			fmt.Printf("Error while downloading '%s': %v\n", v.Name, err)
+			return
+		}
+		if !downloaded {
+			fmt.Println("Already Downloaded.")
+		}
+	}
 	fmt.Printf("Sync, out: %s, path: %s\n", out, path)
 }
 
