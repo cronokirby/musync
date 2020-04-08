@@ -22,7 +22,7 @@ func youtubeDL(url string, outPath string) error {
 	)
 	// We want to capture the stderr inside of the error, hence Output instead of Run
 	if _, err := cmd.Output(); err != nil {
-		return err
+		return fmt.Errorf("Problem while running youtube-dl: %w", err)
 	}
 	return nil
 }
@@ -42,7 +42,7 @@ func convertToMP3(m4aPath string, mp3Path string) error {
 		mp3Path,
 	)
 	if _, err := cmd.Output(); err != nil {
-		return err
+		return fmt.Errorf("Couldn't convert file to mp3: %w", err)
 	}
 	return nil
 }
@@ -58,15 +58,17 @@ func fillSectionMetadata(base string, source *Source, section *Section, sectionI
 	path := source.SectionPath(base, section)
 	tags, err := id3v2.Open(path, id3v2.Options{Parse: true})
 	if err != nil {
-		return err
+		return fmt.Errorf("Couldn't open %s to add metadata: %w", path, err)
 	}
+	// !! Make sure we set the encoding to UTF8, otherwise we get errors
+	tags.SetDefaultEncoding(id3v2.EncodingUTF8)
 	tags.SetTitle(section.Name)
 	tags.SetAlbum(source.Name)
 	tags.SetArtist(source.Artist)
 	tags.AddTextFrame(tags.CommonID("Track number/Position in set"), tags.DefaultEncoding(), fmt.Sprintf("%d/%d", sectionIndex, len(source.Sections)))
 	artwork, err := ioutil.ReadFile(source.CoverArtPath(base))
 	if err != nil {
-		return err
+		return fmt.Errorf("Couldn't read downloaded artwork: %w", err)
 	}
 	pic := id3v2.PictureFrame{
 		Encoding:    id3v2.EncodingUTF8,
@@ -77,7 +79,7 @@ func fillSectionMetadata(base string, source *Source, section *Section, sectionI
 	}
 	tags.AddAttachedPicture(pic)
 	if err := tags.Save(); err != nil {
-		return err
+		return fmt.Errorf("Couldn't save track metadata for %s: %w", section.Name, err)
 	}
 	return nil
 }
@@ -99,7 +101,7 @@ func createSection(base string, source *Source, section *Section, sectionIndex i
 	}
 	cmd := exec.Command("ffmpeg", args...)
 	if _, err := cmd.Output(); err != nil {
-		return err
+		return fmt.Errorf("Couldn't split out section: %w", err)
 	}
 	if err := fillSectionMetadata(base, source, section, sectionIndex); err != nil {
 		return err
@@ -110,7 +112,7 @@ func createSection(base string, source *Source, section *Section, sectionIndex i
 func createAlbumDirectory(base string, source *Source) error {
 	toCreate := source.SectionDirectory(base)
 	if err := os.MkdirAll(toCreate, os.ModePerm); err != nil {
-		return err
+		return fmt.Errorf("Couldn't make album directory: %w", err)
 	}
 	return nil
 }
@@ -131,7 +133,7 @@ func downloadSource(basePath string, source *Source) (bool, error) {
 		return false, err
 	}
 	if err := os.Remove(m4aPath); err != nil {
-		return false, err
+		return false, fmt.Errorf("Couldn't delete m4a file: %w", err)
 	}
 	return true, nil
 }
@@ -174,7 +176,7 @@ func Download(basePath string, source *Source) error {
 	// We can get rid of the downloaded mp3 now that we've split it
 	downloadedPath := source.MP3Path(basePath)
 	if err := os.Remove(downloadedPath); err != nil {
-		return err
+		return fmt.Errorf("Couldn't remove downloaded album: %w", err)
 	}
 	return nil
 }
