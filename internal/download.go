@@ -2,8 +2,11 @@ package internal
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
+
+	"github.com/bogem/id3v2"
 )
 
 // Downloads the url as a big media file
@@ -51,7 +54,35 @@ func pathExists(path string) bool {
 	return false
 }
 
-func createSection(base string, source *Source, section *Section) error {
+func fillSectionMetadata(base string, source *Source, section *Section, sectionIndex int) error {
+	path := source.SectionPath(base, section)
+	tags, err := id3v2.Open(path, id3v2.Options{Parse: true})
+	if err != nil {
+		return err
+	}
+	tags.SetTitle(section.Name)
+	tags.SetAlbum(source.Name)
+	tags.SetArtist(source.Artist)
+	tags.AddTextFrame(tags.CommonID("Track number/Position in set"), tags.DefaultEncoding(), fmt.Sprintf("%d/%d", sectionIndex, len(source.Sections)))
+	artwork, err := ioutil.ReadFile(source.CoverArtPath(base))
+	if err != nil {
+		return err
+	}
+	pic := id3v2.PictureFrame{
+		Encoding:    id3v2.EncodingUTF8,
+		MimeType:    "image/jpeg",
+		PictureType: id3v2.PTFrontCover,
+		Description: "Front cover",
+		Picture:     artwork,
+	}
+	tags.AddAttachedPicture(pic)
+	if err := tags.Save(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func createSection(base string, source *Source, section *Section, sectionIndex int) error {
 	toSplit := source.MP3Path(base)
 	outputPath := source.SectionPath(base, section)
 	args := []string{
@@ -70,6 +101,9 @@ func createSection(base string, source *Source, section *Section) error {
 	if _, err := cmd.Output(); err != nil {
 		return err
 	}
+	if err := fillSectionMetadata(base, source, section, sectionIndex); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -85,7 +119,8 @@ func downloadSource(basePath string, source *Source) (bool, error) {
 	m4aPath := source.M4APath(basePath)
 	mp3Path := source.MP3Path(basePath)
 	hasBeenDownloaded := pathExists(mp3Path)
-	if hasBeenDownloaded {
+	hasBeenSplit := pathExists(source.DirectoryPath(basePath))
+	if hasBeenDownloaded || hasBeenSplit {
 		return false, nil
 	}
 	// Now we actually download
@@ -109,8 +144,8 @@ func splitSource(basePath string, source *Source) (bool, error) {
 	if err := createAlbumDirectory(basePath, source); err != nil {
 		return false, err
 	}
-	for _, v := range source.Sections {
-		if err := createSection(basePath, source, &v); err != nil {
+	for i, v := range source.Sections {
+		if err := createSection(basePath, source, &v, i); err != nil {
 			return false, err
 		}
 	}
