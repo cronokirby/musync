@@ -32,16 +32,11 @@ func sync(out string, path string) {
 	}
 	for _, v := range lib.Sources {
 		fmt.Printf("Downloading '%s'\n", v.Name)
-		downloaded, err := internal.Download(out, &v)
-		if err != nil {
+		if err := internal.Download(out, &v); err != nil {
 			fmt.Printf("Error while downloading '%s': %v\n", v.Name, err)
 			return
 		}
-		if !downloaded {
-			fmt.Println("Already Downloaded.")
-		}
 	}
-	fmt.Printf("Sync, out: %s, path: %s\n", out, path)
 }
 
 func add(path string) {

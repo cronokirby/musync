@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 )
@@ -16,7 +17,8 @@ func youtubeDL(url string, outPath string) error {
 		"m4a",
 		"-o", outPath,
 	)
-	if err := cmd.Run(); err != nil {
+	// We want to capture the stderr inside of the error, hence Output instead of Run
+	if _, err := cmd.Output(); err != nil {
 		return err
 	}
 	return nil
@@ -36,7 +38,7 @@ func convertToMP3(m4aPath string, mp3Path string) error {
 		"-f", "mp3",
 		mp3Path,
 	)
-	if err := cmd.Run(); err != nil {
+	if _, err := cmd.Output(); err != nil {
 		return err
 	}
 	return nil
@@ -49,14 +51,41 @@ func pathExists(path string) bool {
 	return false
 }
 
-// Download will take a basePath, and download a single source into a big mp3
-// This will also download the cover art as well
-func Download(basePath string, source *Source) (bool, error) {
+func createSection(base string, source *Source, section *Section) error {
+	toSplit := source.MP3Path(base)
+	outputPath := source.SectionPath(base, section)
+	args := []string{
+		"-i", toSplit,
+		"-y",
+		"-acodec", "copy",
+		"-id3v2_version", "3",
+		"-ss", section.StartTime,
+	}
+	if section.HasEnd {
+		args = append(args, "-to", section.EndTime, outputPath)
+	} else {
+		args = append(args, outputPath)
+	}
+	cmd := exec.Command("ffmpeg", args...)
+	if _, err := cmd.Output(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func createAlbumDirectory(base string, source *Source) error {
+	toCreate := source.SectionDirectory(base)
+	if err := os.MkdirAll(toCreate, os.ModePerm); err != nil {
+		return err
+	}
+	return nil
+}
+
+func downloadSource(basePath string, source *Source) (bool, error) {
 	m4aPath := source.M4APath(basePath)
 	mp3Path := source.MP3Path(basePath)
 	hasBeenDownloaded := pathExists(mp3Path)
-	hasBeenSplit := pathExists(source.DirectoryPath(basePath))
-	if hasBeenDownloaded || hasBeenSplit {
+	if hasBeenDownloaded {
 		return false, nil
 	}
 	// Now we actually download
@@ -70,4 +99,47 @@ func Download(basePath string, source *Source) (bool, error) {
 		return false, err
 	}
 	return true, nil
+}
+
+func splitSource(basePath string, source *Source) (bool, error) {
+	hasBeenSplit := pathExists(source.DirectoryPath(basePath))
+	if hasBeenSplit {
+		return false, nil
+	}
+	if err := createAlbumDirectory(basePath, source); err != nil {
+		return false, err
+	}
+	for _, v := range source.Sections {
+		if err := createSection(basePath, source, &v); err != nil {
+			return false, err
+		}
+	}
+	return true, nil
+}
+
+// Download will take a basePath, and download a single source into a big mp3
+// This will also download the cover art as well. We will then split the big mp3
+// into the sections that compose it, annotating it with metadata
+func Download(basePath string, source *Source) error {
+	downloaded, err := downloadSource(basePath, source)
+	if err != nil {
+		return err
+	}
+	if !downloaded {
+		fmt.Println("  Already Downloaded")
+	}
+	fmt.Printf("  Splitting '%s'\n", source.Name)
+	split, err := splitSource(basePath, source)
+	if err != nil {
+		return err
+	}
+	if !split {
+		fmt.Println("  Already Split")
+	}
+	// We can get rid of the downloaded mp3 now that we've split it
+	downloadedPath := source.MP3Path(basePath)
+	if err := os.Remove(downloadedPath); err != nil {
+		return err
+	}
+	return nil
 }

@@ -58,6 +58,18 @@ func (s *Source) CoverArtPath(base string) string {
 	return path.Join(base, s.Path, s.Name+".jpg")
 }
 
+// SectionDirectory returns the path where section files would be stored
+func (s *Source) SectionDirectory(base string) string {
+	return path.Join(base, s.Path, s.Name)
+}
+
+// SectionPath returns the path to a section file contained in this Source
+// For example, if an album contains a specific song, this will give us the final path
+// of that song, contained in the album directory
+func (s *Source) SectionPath(base string, section *Section) string {
+	return path.Join(s.SectionDirectory(base), section.Name+".mp3")
+}
+
 // Library represents a collection of sources we want to gather and download
 type Library struct {
 	// The individual sources that make up this library
