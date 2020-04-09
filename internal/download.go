@@ -170,8 +170,11 @@ func Download(basePath string, source *Source) error {
 	if err != nil {
 		return err
 	}
+	// If we've already split, then there should be now big mp3 to remove, so we can
+	// go ahead and return
 	if !split {
 		fmt.Println("  Already Split")
+		return nil
 	}
 	// We can get rid of the downloaded mp3 now that we've split it
 	downloadedPath := source.MP3Path(basePath)
