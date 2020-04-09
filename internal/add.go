@@ -17,7 +17,10 @@ func readLine() string {
 	if err != nil {
 		panic(err)
 	}
-	return line
+	if len(line) < 2 {
+		return line
+	}
+	return line[:len(line)-1]
 }
 
 func promptForURL() string {
