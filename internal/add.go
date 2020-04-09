@@ -11,37 +11,37 @@ import (
 	"github.com/BurntSushi/toml"
 )
 
+func readLine() string {
+	r := bufio.NewReader(os.Stdin)
+	line, err := r.ReadString('\n')
+	if err != nil {
+		panic(err)
+	}
+	return line
+}
+
 func promptForURL() string {
 	fmt.Println("URL:")
-	var url string
-	fmt.Scanln(&url)
-	return url
+	return readLine()
 }
 
 func promptForName() string {
 	fmt.Println("Name:")
-	var name string
-	fmt.Scanln(&name)
-	return name
+	return readLine()
 }
 
 func promptForArtist() string {
 	fmt.Println("Artist:")
-	var artist string
-	fmt.Scanln(&artist)
-	return artist
+	return readLine()
 }
 
 func promptForPath() string {
 	fmt.Println("Path:")
-	var path string
-	fmt.Scanln(&path)
-	return path
+	return readLine()
 }
 
 func readYesNo() bool {
-	var answer string
-	fmt.Scanln(&answer)
+	answer := readLine()
 	answer = strings.ToLower(answer)
 	if answer == "y" || answer == "yes" {
 		return true
@@ -49,7 +49,7 @@ func readYesNo() bool {
 	return false
 }
 
-func readLine(r *bufio.Reader) (string, error) {
+func readLineHandlingEOF(r *bufio.Reader) (string, error) {
 	var bytes []byte
 	for {
 		line, isPrefix, err := r.ReadLine()
@@ -68,7 +68,7 @@ func readLinesUntilEOF() ([]string, error) {
 	r := bufio.NewReader(os.Stdin)
 	var lines []string
 	for {
-		line, err := readLine(r)
+		line, err := readLineHandlingEOF(r)
 		if err != nil {
 			if err == io.EOF {
 				break
