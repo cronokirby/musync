@@ -40,7 +40,9 @@ func sync(out string, path string) {
 }
 
 func add(path string) {
-	fmt.Printf("Add, path: %s\n", path)
+	if err := internal.PromptToAddSource(path); err != nil {
+		fmt.Printf("Failed to add source: %v", err)
+	}
 }
 
 func main() {

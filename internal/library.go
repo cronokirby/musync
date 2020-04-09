@@ -79,22 +79,17 @@ type Library struct {
 // These types are used for automatic toml decoding
 // So here we just have a timestamp, and then zip multiple sections together to
 // get a start and end time
-type rawSection struct {
-	Name      string
-	Timestamp string
-}
-
 type rawSource struct {
-	Name       string
-	Artist     string
-	Path       string
-	URL        string
-	Namestamps []string
-	Timestamps []string
+	Name       string   `toml:"name"`
+	Artist     string   `toml:"artist"`
+	Path       string   `toml:"path"`
+	URL        string   `toml:"url"`
+	Namestamps []string `toml:"namestamps"`
+	Timestamps []string `toml:"timestamps"`
 }
 
 type rawLibrary struct {
-	Source []rawSource
+	Source []rawSource `toml:"source"`
 }
 
 // LoadLibrary parses a toml document to a library structure
