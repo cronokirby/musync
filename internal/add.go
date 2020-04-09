@@ -154,15 +154,13 @@ func promptForNamesAndTimes() ([]string, []string, error) {
 	fmt.Println("Names:")
 	names = make([]string, 0, count)
 	for i := 0; i < count; i++ {
-		var name string
-		fmt.Scanf("%s", &name)
+		name := readLine()
 		names = append(names, name)
 	}
 	fmt.Println("Timestamps:")
 	times = make([]string, 0, count)
 	for i := 0; i < count; i++ {
-		var time string
-		fmt.Scanf("%s", &time)
+		time := readLine()
 		times = append(times, time)
 	}
 	return names, times, nil
