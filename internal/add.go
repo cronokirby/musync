@@ -1,8 +1,12 @@
 package internal
 
 import (
+	"bufio"
 	"fmt"
+	"io"
 	"os"
+	"regexp"
+	"strings"
 
 	"github.com/BurntSushi/toml"
 )
@@ -35,37 +39,146 @@ func promptForPath() string {
 	return path
 }
 
-// Strategy: just ask for each time and name, make sure they're the same length
-func promptForNamesAndTimes() ([]string, []string) {
-	fmt.Println("Let's enter each timestamp and song name then.")
+func readYesNo() bool {
+	var answer string
+	fmt.Scanln(&answer)
+	answer = strings.ToLower(answer)
+	if answer == "y" || answer == "yes" {
+		return true
+	}
+	return false
+}
+
+func readLine(r *bufio.Reader) (string, error) {
+	var bytes []byte
+	for {
+		line, isPrefix, err := r.ReadLine()
+		if err != nil {
+			return "", err
+		}
+		bytes = append(bytes, line...)
+		if !isPrefix {
+			break
+		}
+	}
+	return string(bytes), nil
+}
+
+func readLinesUntilEOF() ([]string, error) {
+	r := bufio.NewReader(os.Stdin)
+	var lines []string
+	for {
+		line, err := readLine(r)
+		if err != nil {
+			if err == io.EOF {
+				break
+			} else {
+				return nil, err
+			}
+		}
+		lines = append(lines, line)
+	}
+	return lines, nil
+}
+
+var nameRegexes = []string{`^(\w+)`}
+var timeRegexes = []string{`\((\d+:\d+)\)`}
+
+func tryRegexNumber(i int, lines []string) ([]string, []string) {
+	nameRegex := regexp.MustCompile(nameRegexes[i])
+	timeRegex := regexp.MustCompile(timeRegexes[i])
+	var names []string
+	var times []string
+	for _, line := range lines {
+		nameMatches := nameRegex.FindStringSubmatch(line)
+		if len(nameMatches) < 1 || nameMatches[1] == "" {
+			return nil, nil
+		}
+		timeMatches := timeRegex.FindStringSubmatch(line)
+		if len(timeMatches) < 1 || timeMatches[1] == "" {
+			return nil, nil
+		}
+		names = append(names, nameMatches[1])
+		times = append(times, timeMatches[1])
+	}
+	return names, times
+}
+
+// This will try and extract names and times from a pasting of the description
+func getNamesAndTimesFromPaste(count int, lines []string) ([]string, []string) {
+	if len(lines) != count {
+		fmt.Printf("Expecting %d songs, but only found %d lines\n", count, len(lines))
+		return nil, nil
+	}
+	for i := 0; i < len(nameRegexes); i++ {
+		names, times := tryRegexNumber(i, lines)
+		if names != nil && times != nil {
+			fmt.Println("Extracted the following:")
+			for j := 0; j < len(names); j++ {
+				fmt.Printf("  %s (%s)\n", names[j], times[j])
+			}
+			fmt.Println("Does this look right to you? (Y/N)")
+			looksRight := readYesNo()
+			if looksRight {
+				return names, times
+			}
+		}
+	}
+	return nil, nil
+}
+
+// Strategy: try and extract the names and times using regexes, and then just ask for
+// each time and name if it's necessary
+func promptForNamesAndTimes() ([]string, []string, error) {
 	fmt.Println("How many songs are there?")
 	var count int
 	fmt.Scanf("%d", &count)
+	var names []string
+	var times []string
+	fmt.Println("Would you like to try and extract names / times from a description? (Y/N)")
+	shouldExtract := readYesNo()
+	if shouldExtract {
+		fmt.Println("Please paste that description, end with CTRL+D:")
+		lines, err := readLinesUntilEOF()
+		if err != nil {
+			return nil, nil, err
+		}
+		names, times = getNamesAndTimesFromPaste(count, lines)
+		if names != nil && times != nil {
+
+			return names, times, nil
+		}
+		fmt.Println("We couldn't extract the timestamps using our builtin regexes")
+	}
+	fmt.Println("Let's enter each timestamp and song name then.")
 	fmt.Println("Names:")
-	names := make([]string, 0, count)
+	names = make([]string, 0, count)
 	for i := 0; i < count; i++ {
 		var name string
 		fmt.Scanf("%s", &name)
 		names = append(names, name)
 	}
 	fmt.Println("Timestamps:")
-	times := make([]string, 0, count)
+	times = make([]string, 0, count)
 	for i := 0; i < count; i++ {
 		var time string
 		fmt.Scanf("%s", &time)
 		times = append(times, time)
 	}
-	return names, times
+	return names, times, nil
 }
 
 // This will use the command line to ask the user for information in order to construct
 // a new source
-func promptForRawSource() *rawSource {
+func promptForRawSource() (*rawSource, error) {
 	url := promptForURL()
 	name := promptForName()
 	artist := promptForArtist()
 	path := promptForPath()
-	names, times := promptForNamesAndTimes()
+	names, times, err := promptForNamesAndTimes()
+	if err != nil {
+		return nil, err
+	}
 	return &rawSource{
 		Name:       name,
 		Artist:     artist,
@@ -73,7 +186,7 @@ func promptForRawSource() *rawSource {
 		URL:        url,
 		Namestamps: names,
 		Timestamps: times,
-	}
+	}, nil
 }
 
 // This will append a raw source to a given file.
@@ -96,6 +209,9 @@ func writeRawSourceTo(path string, source *rawSource) error {
 
 // PromptToAddSource will ask the user for information about a source, before adding it to path
 func PromptToAddSource(path string) error {
-	newSource := promptForRawSource()
+	newSource, err := promptForRawSource()
+	if err != nil {
+		return err
+	}
 	return writeRawSourceTo(path, newSource)
 }
