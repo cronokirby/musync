@@ -84,8 +84,14 @@ func readLinesUntilEOF() ([]string, error) {
 	return lines, nil
 }
 
-var nameRegexes = []string{`^(\w+)`}
-var timeRegexes = []string{`\((\d+:\d+)\)`}
+var nameRegexes = []string{
+	`^(\w+)`,
+	`^\d+.\s([^\(]+)\s\(\d+:\d+\)`,
+}
+var timeRegexes = []string{
+	`\((\d+:\d+)\)`,
+	`\((\d+:\d+)\)`,
+}
 
 func tryRegexNumber(i int, lines []string) ([]string, []string) {
 	nameRegex := regexp.MustCompile(nameRegexes[i])
