@@ -86,9 +86,11 @@ func readLinesUntilEOF() ([]string, error) {
 
 var nameRegexes = []string{
 	`^\d+.\s([^\(]+)\s\(\d+:\d+\)`,
+	`^\d+.\s([^\(]+)\s\d+:\d+`,
 }
 var timeRegexes = []string{
 	`\((\d+:\d+)\)`,
+	`(\d+:\d+)`,
 }
 
 func tryRegexNumber(i int, lines []string) ([]string, []string) {
