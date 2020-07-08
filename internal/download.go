@@ -15,7 +15,7 @@ func youtubeDL(url string, outPath string) error {
 		"youtube-dl",
 		url,
 		"-x",
-		"--write-thumbnail",
+		"--write-all-thumbnails",
 		"--audio-format",
 		"m4a",
 		"-o", outPath,
