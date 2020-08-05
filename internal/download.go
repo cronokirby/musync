@@ -2,7 +2,6 @@ package internal
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 
@@ -15,7 +14,7 @@ func youtubeDL(url string, outPath string) error {
 		"youtube-dl",
 		url,
 		"-x",
-		"--write-all-thumbnails",
+		"--write-thumbnail",
 		"--audio-format",
 		"m4a",
 		"-o", outPath,
@@ -66,18 +65,9 @@ func fillSectionMetadata(base string, source *Source, section *Section, sectionI
 	tags.SetAlbum(source.Name)
 	tags.SetArtist(source.Artist)
 	tags.AddTextFrame(tags.CommonID("Track number/Position in set"), tags.DefaultEncoding(), fmt.Sprintf("%d/%d", sectionIndex, len(source.Sections)))
-	artwork, err := ioutil.ReadFile(source.CoverArtPath(base))
 	if err != nil {
 		return fmt.Errorf("Couldn't read downloaded artwork: %w", err)
 	}
-	pic := id3v2.PictureFrame{
-		Encoding:    id3v2.EncodingUTF8,
-		MimeType:    "image/jpeg",
-		PictureType: id3v2.PTFrontCover,
-		Description: "Front cover",
-		Picture:     artwork,
-	}
-	tags.AddAttachedPicture(pic)
 	if err := tags.Save(); err != nil {
 		return fmt.Errorf("Couldn't save track metadata for %s: %w", section.Name, err)
 	}

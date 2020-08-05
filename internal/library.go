@@ -53,11 +53,6 @@ func (s *Source) M4APath(base string) string {
 	return path.Join(base, s.Path, s.Name+".m4a")
 }
 
-// CoverArtPath returns the path to the cover art
-func (s *Source) CoverArtPath(base string) string {
-	return path.Join(base, s.Path, s.Name+".jpg")
-}
-
 // SectionDirectory returns the path where section files would be stored
 func (s *Source) SectionDirectory(base string) string {
 	return path.Join(base, s.Path, s.Name)
