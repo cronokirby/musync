@@ -7,6 +7,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"unicode"
 
 	"github.com/BurntSushi/toml"
 )
@@ -87,7 +88,7 @@ func readLinesUntilEOF() ([]string, error) {
 var nameRegexes = []string{
 	`^\d+.\s([^\(]+)\s\(\d+:\d+\)`,
 	`^\d+.\s([^\(]+)\s\d+:\d+`,
-	`^\d+(?::\d+)+\s+-\s+(.*)$`,
+	`^\d+(?::\d+)+.+-\s+(.*)$`,
 }
 var timeRegexes = []string{
 	`\((\d+:\d+)\)`,
@@ -101,6 +102,11 @@ func tryRegexNumber(i int, lines []string) ([]string, []string) {
 	var names []string
 	var times []string
 	for _, line := range lines {
+
+		line = strings.TrimFunc(line, func(r rune) bool {
+			return !unicode.IsGraphic(r)
+		})
+
 		nameMatches := nameRegex.FindStringSubmatch(line)
 		if len(nameMatches) < 1 || nameMatches[1] == "" {
 			return nil, nil
